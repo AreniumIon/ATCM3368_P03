@@ -28,6 +28,27 @@ public class PlayerController : MonoBehaviour
     private float horizontalInput;
     private bool jumpInput;
     private bool crouchInput;
+    private bool parryInput;
+
+    [Header("Parry Variables")]
+    private bool isParrying = false; // true if busy with the parry animation
+    public bool canReflect = false; // true if can reflect projectiles
+    [SerializeField] float parryTime = 0.5f;
+    [SerializeField] float parryCooldown = 0.5f;
+
+    private float parryTimer = 0f;
+
+    [Header("Damage Variables")]
+    private bool isDamaged = false; // true if busy with the damage
+    [SerializeField] float damageTime = 2f;
+
+    private float damageTimer = 0f;
+
+    // Sounds
+    [SerializeField] AudioSource parrySound;
+    [SerializeField] AudioSource takeDamageSound;
+    [SerializeField] AudioSource jumpSound;
+
 
     private void Awake()
     {
@@ -40,6 +61,36 @@ public class PlayerController : MonoBehaviour
         horizontalInput = Input.GetAxis("Horizontal");
         jumpInput = Input.GetKeyDown(KeyCode.UpArrow);
         crouchInput = Input.GetKeyDown(KeyCode.DownArrow);
+        parryInput = Input.GetKeyDown(KeyCode.LeftShift);
+
+        // Update parry timer
+        if (isParrying)
+        {
+            parryTimer += Time.deltaTime;
+
+            // Disallow reflecting
+            if (parryTimer >= parryTime)
+                canReflect = false;
+
+            // Remove parry
+            if (parryTimer >= parryTime + parryCooldown)
+                isParrying = false;
+        }
+
+        // Update damage timer
+        if (isDamaged)
+        {
+            damageTimer += Time.deltaTime;
+
+            // Detect end of damage animation
+            if (damageTimer >= damageTime)
+            {
+                isDamaged = false;
+
+                // Animation
+                animator.SetInteger("State", 0);
+            }
+        }
     }
 
     private void FixedUpdate()
@@ -58,7 +109,14 @@ public class PlayerController : MonoBehaviour
             }
         }
         
-        Move();
+        // Parry if can
+        if (isGrounded && parryInput && !isParrying && !isDamaged)
+            Parry();
+        // Calculate movement if not parrying/damaged
+        else if (!isParrying && !isDamaged)
+            Move();
+
+        // Apply movement
         transform.position += velocity;
     }
 
@@ -66,7 +124,7 @@ public class PlayerController : MonoBehaviour
     public void Move()
     {
         // Jumping
-        if (jumpInput)
+        if (jumpInput && !isParrying)
         {
             Jump();
             isGrounded = false;
@@ -162,6 +220,7 @@ public class PlayerController : MonoBehaviour
 
         // Animation
         animator.SetInteger("State", 2);
+        jumpSound.Play();
     }
 
 
@@ -174,5 +233,44 @@ public class PlayerController : MonoBehaviour
         Vector3 theScale = transform.localScale;
         theScale.x *= -1;
         transform.localScale = theScale;
+    }
+
+    // PARRY MECHANICS
+
+    private void Parry()
+    {
+        // Set parry variables
+        isParrying = true;
+        canReflect = true;
+        parryTimer = 0f;
+
+        // Stop velocity
+        velocity = Vector3.zero;
+
+        // Animation
+        animator.SetInteger("State", 4);
+        parrySound.Play();
+    }
+
+    // Called by a projectile when reflected by the player. Speeds up the parry animation so the player can move again
+    public void ActivateParry()
+    {
+        parryTimer = parryTime + parryCooldown;
+
+        // Animation
+        animator.SetInteger("State", 0);
+    }
+
+    public void TakeDamage()
+    {
+        isDamaged = true;
+        damageTimer = 0f;
+        
+        // Stop velocity
+        velocity = Vector3.zero;
+
+        // Animation
+        animator.SetInteger("State", 3);
+        takeDamageSound.Play();
     }
 }
