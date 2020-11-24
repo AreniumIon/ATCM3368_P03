@@ -237,6 +237,7 @@ public class PlayerController : MonoBehaviour
 
     // PARRY MECHANICS
 
+    // Called by pressing shift
     private void Parry()
     {
         // Set parry variables
@@ -249,6 +250,8 @@ public class PlayerController : MonoBehaviour
 
         // Animation
         animator.SetInteger("State", 4);
+        
+        //Sound Effects
         parrySound.Play();
     }
 

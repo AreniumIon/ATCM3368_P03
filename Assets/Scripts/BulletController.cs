@@ -36,11 +36,13 @@ public class BulletController : MonoBehaviour
         PlayerController player = collision.GetComponent<PlayerController>();
         if (!isParried && player != null)
         {
+            // Reflect if player is parrying
             if (player.canReflect)
             {
                 Reflect();
                 player.ActivateParry();
             }
+            // Damage player if not parrying
             else
             {
                 player.TakeDamage();
@@ -49,6 +51,7 @@ public class BulletController : MonoBehaviour
             return;
         }
 
+        // Collide with turret
         TurretController turret = collision.GetComponent<TurretController>();
         if (isParried && turret != null)
         {
